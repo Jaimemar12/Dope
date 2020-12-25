@@ -169,6 +169,6 @@ class MessagesFormat {
 		}
 	}
 	public static boolean hasPermission(Permission permission) {
-		return (!MessageEvents.getGuild().getSelfMember().hasPermission(permission) || !MessageEvents.getEvent().getMember().hasPermission(permission));
+		return !(MessageEvents.getGuild().getSelfMember().hasPermission(permission) && MessageEvents.getEvent().getMember().hasPermission(permission));
 	}
 }

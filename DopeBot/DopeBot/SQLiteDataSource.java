@@ -93,7 +93,7 @@ public class SQLiteDataSource {
 			String sql =  "INSERT INTO guild(guildID, username, userID, banned) VALUES(?,?,?,?)";
 			ps = con.prepareStatement(sql);
 			ps.setString(1, MessageEvents.getGuild().getId());
-			ps.setString(2, user.getName());
+			ps.setString(2, user.getName().replace(" ", ""));
 			ps.setString(3, user.getId());
 			ps.setString(4, "true");
 			ps.execute();
