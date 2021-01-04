@@ -7,6 +7,7 @@ import java.sql.SQLException;
 import java.util.Random;
 
 import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.events.guild.member.GuildMemberJoinEvent;
 import net.dv8tion.jda.api.events.guild.member.GuildMemberRemoveEvent;
 import net.dv8tion.jda.api.events.message.react.MessageReactionAddEvent;
@@ -14,16 +15,19 @@ import net.dv8tion.jda.api.hooks.ListenerAdapter;
 
 public class GuildEvent extends ListenerAdapter{
 	
+	private static MessageReactionAddEvent channel = null;
+	private static Member member = null;
 	public void onMessageReactionAdd(MessageReactionAddEvent event) {
-		
-		if(!MessageEvents.getMessageId().isEmpty() && MessageEvents.getMessageId().contains(event.getMessageId()) && !event.getReaction().isSelf()) {
+		channel = event;
+		member = event.getMember();
+		if(!event.getReaction().isSelf()) {
 			String emote = event.getReaction().getReactionEmote().getEmoji();
 			if(emote.equals("ℹ")) {
 				try {
 					MessagesFormat.editEmbed(MessagesFormat.getInfoEmbed("Welcome to the **@DopeBot** help menu.\n\nThis menu will show you all commands you can run!", "commandList"), emote);
 				} catch (SQLException e) {
 					e.printStackTrace();
-				} 
+				}
 			}else if(emote.equals("💠")) {
 				try {
 					MessagesFormat.editEmbed(MessagesFormat.getInfoEmbed("Dope 💠", "dope"), emote);
@@ -41,7 +45,7 @@ public class GuildEvent extends ListenerAdapter{
 					MessagesFormat.editEmbed(MessagesFormat.getInfoEmbed("Moderation 💎", "moderator"), emote);
 				} catch (SQLException e) {
 					e.printStackTrace();
-				} 
+				}
 			}else if(emote.equals("🎬")) {
 				try {
 					MessagesFormat.editEmbed(MessagesFormat.getInfoEmbed("Media 🎬", "media"), emote);
@@ -57,6 +61,12 @@ public class GuildEvent extends ListenerAdapter{
 			}
 		}
 	 }
+	public static MessageReactionAddEvent getChannel() {
+		return channel;
+	}
+	public static Member getMember() {
+		return member;
+	}
 }
 
 class GuildMemberJoin extends ListenerAdapter {

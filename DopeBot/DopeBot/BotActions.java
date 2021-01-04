@@ -22,6 +22,7 @@ import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Activity;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Role;
+import net.dv8tion.jda.api.exceptions.ErrorResponseException;
 import net.dv8tion.jda.api.exceptions.HierarchyException;
 
 public interface BotActions {
@@ -36,7 +37,7 @@ class Ball implements BotActions {
 		
 		//If user's input was only 2 words the help menu will be sent to explain how the command works
 		if(MessageEvents.getSize() == 2)
-			MessagesFormat.sendHelp("Example: @DopeBot 8ball Will it rain today?");
+			MessagesFormat.sendHelp();
 		
 		//Else a random phrase from ball[] will be chosen to be sent back to the user
 		else {
@@ -56,15 +57,15 @@ class AddRole implements BotActions {
 		
 		//If the message was less than 4 words or was not sent from a guild the help menu will be sent to explain how the command works
 		if(MessageEvents.getSize() < 4 || !MessageEvents.getEvent().isFromGuild())
-			MessagesFormat.sendHelp("Example: @DopeBot addrole @DopeJaime Diamond Knight");
+			MessagesFormat.sendHelp();
 		
 		//Else If the member that requested the command has permission to manage roles
   		else if(MessagesFormat.hasPermission(Permission.MANAGE_ROLES)) 
-  			MessagesFormat.sendHelp("You or me do not have permission to manage roles");
+  			MessagesFormat.sendHelp();
 		
 		//Else If only one user was mention the help menu with an example will be sent
-		else if(MessageEvents.getMembers().size() != 1)
-			MessagesFormat.sendHelp("Example: @DopeBot avatar @DopeJaime @JaimeDope");
+		else if(MessageEvents.getMembers().size() != 2)
+			MessagesFormat.sendHelp();
 		
 		//Else it will add the requested role to the mentioned user. It will only work when the role a role which is less than the bot's and can be found in the guild role list
   		else {
@@ -95,18 +96,17 @@ class Alert implements BotActions {
 		
 		//If the message was only 2 words or it was not from a guild the help menu for the command will be sent
 		if(MessageEvents.getSize() == 2 || !MessageEvents.getEvent().isFromGuild())
-			MessagesFormat.sendHelp("Example @DopeBot alert I hope everyone is doing well");
+			MessagesFormat.sendHelp();
 		
 		//Else If the bot or user did not have administrator permission this will be sent
 		else if(MessagesFormat.hasPermission(Permission.ADMINISTRATOR))
-			MessagesFormat.sendHelp("You or me do not have administrator permission");
+			MessagesFormat.sendHelp();
 		
 		//Else the message will be sent to the announcement channel if it was properly set up
 		else {
 			try {
 				MessageEvents.getGuild().getTextChannelsByName("announcements📢", true).get(0).sendMessage("@everyone " + MessagesFormat.getSentence(2)).queue();
 				MessagesFormat.send(MessagesFormat.createEmbed(Color.BLUE, MessageEvents.getSelfname() + " your message has been sent to announcements📢"));
-			
 			}catch (Exception e) {
 				MessagesFormat.sendHelp("announcements📢 channel was not found");
 			}
@@ -126,15 +126,15 @@ class Avatar implements BotActions {
 		
 		//Else if the bot or user does not have permission to manage the server the help menu will be sent with an explanation
 		else if(MessagesFormat.hasPermission(Permission.MANAGE_SERVER))
-			MessagesFormat.sendHelp("You or me do not have permission to manage the server");
+			MessagesFormat.sendHelp();
 		
 		//Else If only one user was mention the help menu with an example will be sent
 		else if(MessageEvents.getMembers().size() == 1)
-			MessagesFormat.sendHelp("Example: @DopeBot avatar @DopeJaime @JaimeDope");
+			MessagesFormat.sendHelp();
 		
 		//Else it will print all the avatar of the mentioned users
   		else {
-  			for (Member user : MessageEvents.getMembers().subList( 1, MessageEvents.getMembers().size())){
+  			for (Member user : MessageEvents.getMembers().subList(1, MessageEvents.getMembers().size())){
   				try {
   					if(!user.getUser().getAvatarUrl().equals(null)) 
 	        				MessagesFormat.send(user.getUser().getAvatarUrl());
@@ -159,20 +159,22 @@ class Ban implements BotActions {
 		
 		//Else If the bot or the user does not have ban permissions the help menu with an explanation will be sent
 		else if(MessagesFormat.hasPermission(Permission.BAN_MEMBERS))
-			MessagesFormat.sendHelp("Your or me do not have permission to ban members");
+			MessagesFormat.sendHelp();
 		
-		//Else If message only has one mentioned person the help menu with an explenation will be sent
+		//Else If message only has one mentioned person the help menu with an explanation will be sent
 		else if(MessageEvents.getMembers().size() == 1)
-			MessagesFormat.sendHelp("Example: @DopeBot ban @DopeJaime @JaimeDope");
+			MessagesFormat.sendHelp();
 		
 		//Else it will go trough the mentioned members and ban them if it can
 		else {	
 			for(Member user : MessageEvents.getMembers().subList(1, MessageEvents.getMembers().size())) {
 				try {
+		    		MessageEvents.getGuild().ban(user, 0).complete();
 					SQLiteDataSource.addBanned(user.getUser());
-		    		MessageEvents.getGuild().ban(user, 1).queue();
 		    		MessagesFormat.send(MessagesFormat.createEmbed(Color.BLUE, user.getUser().getName() + " has  been banned"));
 				}catch(HierarchyException e) {
+					MessagesFormat.sendHelp("Cannot ban " + user.getUser().getName() + ", I have equal or lower hierchy than the person");
+				}catch(ErrorResponseException ex) {
 					MessagesFormat.sendHelp("Cannot ban " + user.getUser().getName() + ", I have equal or lower hierchy than the person");
 				}
 			}
@@ -188,11 +190,12 @@ class Cat implements BotActions {
 		
 		//If the message is not composed of 2 words it will send the help menu
 		if(MessageEvents.getSize() != 2) 
-			MessagesFormat.sendHelp("Example: @DopeBot cat");
+			MessagesFormat.sendHelp();
 		
 		//Else it will get the API and send a random picture of a cat
 		else 
-			WebUtils.ins.scrapeWebPage("https://api.thecatapi.com/api/images/get?MessagesFormat=xml&results_per_page=1").async((document) -> {MessagesFormat.send(document.getElementsByTag("url").first().html());});
+			WebUtils.ins.scrapeWebPage("https://api.thecatapi.com/api/images/get?format=xml&results_per_page=1").async((document) -> {
+			MessageEvents.getEvent().getChannel().sendMessage(document.getElementsByTag("url").first().html()).queue();});
 	}
 }
 
@@ -204,11 +207,11 @@ class Clear implements BotActions {
 		
 		//If the message was not from the guild or it was more than 3 words the help menu with an explenation will be sent
 		if(!MessageEvents.getEvent().isFromGuild() || MessageEvents.getSize() > 3)
-			MessagesFormat.sendHelp("Example: @DopeBot clear 50");
+			MessagesFormat.sendHelp();
 		
 		//Else If the bot or the user does not have message manage permission the help menu will be sent with an explenation
 		else if(MessagesFormat.hasPermission(Permission.MESSAGE_MANAGE))
-			MessagesFormat.sendHelp("You or me do not have persmission to manage messages or view past messages");
+			MessagesFormat.sendHelp();
 		
 		//Else If the message only has 2 words it will clear 20 messages by default
 		else if(MessageEvents.getSize() == 2) {
@@ -242,7 +245,7 @@ class Coin implements BotActions {
 		
 		//If the message has less than 3 words the help menu will be sent
 		if(MessageEvents.getSize() < 3)
-			MessagesFormat.sendHelp("Example: @DopeBot heads I order pizza, tails you order chinese food");
+			MessagesFormat.sendHelp();
 		
 		//Else heads or tails will be sent
 		else {
@@ -260,11 +263,11 @@ class Dog implements BotActions {
 		
 		//If the message is not composed of 2 words it will send the help menu
 		if(MessageEvents.getSize() != 2)
-			MessagesFormat.sendHelp("Example: @DopeBot dog");
+			MessagesFormat.sendHelp();
 		
 		//Else it will get the API and send a random picture of a cat
 		else
-			WebUtils.ins.getJSONObject("https://random.dog/woof.json").async( (json) -> {MessagesFormat.send(json.get("url").asText());});
+			WebUtils.ins.getJSONObject("https://random.dog/woof.json").async((json) -> {MessagesFormat.send(json.get("url").asText());});
 	}
 }
 
@@ -292,7 +295,7 @@ class Gif implements BotActions {
 		
 		//If the message is composed of only 2 words the help menu will be sent
     	if(MessageEvents.getSize() == 2) {
-    		MessagesFormat.sendHelp("Example: @DopeBot gif John Cena");
+    		MessagesFormat.sendHelp();
     	
     	//Else it will send the searched gif
     	}else {
@@ -308,7 +311,11 @@ class Gif implements BotActions {
     					result[counter++] = input.substring(13, input.length() - 1); //8606566 20 or 21
     				}
     			}
-    			MessagesFormat.send("https://tenor.com/view/" + MessagesFormat.getSentence(2).replace(" ", "-") + "-gif-" + result[new Random().nextInt(result.length)]);
+    			String id = result[new Random().nextInt(result.length)];
+    			if(!id.equals("null"))
+    				MessagesFormat.send("https://tenor.com/view/" + MessagesFormat.getSentence(2).replace(" ", "-") + "-gif-" + id);
+    			else
+    				MessagesFormat.sendHelp("There was no results for " + MessagesFormat.getSentence(2));
     		} catch (Exception e) {
     			MessagesFormat.sendHelp("There was an error while sending the GIF");
     		}
@@ -322,28 +329,29 @@ class Help implements BotActions {
 	public void execute() throws SQLException {
 		
 		//If the message has more than 3 words this will be sent
-		if(MessageEvents.getSize() > 3) 
+		if(MessageEvents.getSize() > 3)
 			MessagesFormat.send(new EmbedBuilder().setTitle(MessageEvents.getCommand().toUpperCase() + " COMMAND").setFooter(SQLiteDataSource.getHelp("footer1"), SQLiteDataSource.getHelp("footer2"))
 					.setColor(Color.BLACK).setDescription("Use @DopeBot help [Command]").build());
 		
 		//Else If there are 3 words the help menu of the 3rd word will be sent
 		else if (MessageEvents.getSize() == 3) {
-			try {
-				MessagesFormat.send(MessagesFormat.createHelpEmbed(Color.BLACK, MessageEvents.getPostCommand(), SQLiteDataSource.getHelp(MessageEvents.getEvent().getGuild().getId(), MessageEvents.getPostCommand())).build());
-			} catch (Exception e){
-				MessagesFormat.send(MessagesFormat.createHelpEmbed(Color.BLACK, MessageEvents.getPostCommand(), SQLiteDataSource.getHelp(MessageEvents.getPostCommand())).build());
+			if(MessageEvents.getBotCommands().containsKey(MessageEvents.getPostCommand())) {
+				try {
+					MessagesFormat.send(MessagesFormat.createHelpEmbed(Color.BLACK, MessageEvents.getPostCommand(), SQLiteDataSource.getHelp(MessageEvents.getEvent().getGuild().getId(), MessageEvents.getPostCommand())).build());
+				} catch (Exception e){
+					MessagesFormat.send(MessagesFormat.createHelpEmbed(Color.BLACK, MessageEvents.getPostCommand(), SQLiteDataSource.getHelp(MessageEvents.getPostCommand())).build());
+				}
 			}
 		}
 		
 		//Else the general help menu will be sent with some reactions to it
 		else {
-			if(MessageEvents.getMessageId().length() > 0) {
+			if(SQLiteDataSource.getHelpID() != null) {
 				try {
-					MessageEvents.getEvent().getChannel().deleteMessageById(MessageEvents.getMessageId()).queue();
+					MessageEvents.getEvent().getPrivateChannel().deleteMessageById(SQLiteDataSource.getHelpID()).queue();
 				}catch(Exception e) {
-					MessageEvents.getEvent().getPrivateChannel().deleteMessageById(MessageEvents.getMessageId()).queue();
+					MessageEvents.getEvent().getChannel().deleteMessageById(SQLiteDataSource.getHelpID()).queue();
 				}
-				MessageEvents.resetMessageId();
 			}
 			MessageEvents.setId();
 			EmbedBuilder info = MessagesFormat.getInfoEmbed("Welcome to the **@DopeBot** help menu.\n\nThis menu will show you all commands you can run!", "commandList");
@@ -378,11 +386,11 @@ class Invitation implements BotActions {
 		
 		//If the message has more than 3 words the help menu will be sent with an example
 		if(MessageEvents.getSize() > 3 || !MessageEvents.getEvent().isFromGuild()) 
-			MessagesFormat.sendHelp("Example: @DopeBot invitation [1-1400]");
+			MessagesFormat.sendHelp();
 		
 		//Else If the bot does not have permission to create invite then the help menu will be printed with this error message
 		else if(!MessageEvents.getGuild().getSelfMember().hasPermission(Permission.CREATE_INSTANT_INVITE))
-			MessagesFormat.sendHelp("I do not have permission to create invites");
+			MessagesFormat.sendHelp();
 		
 		//Else If the message is composed of only 2 words then the defult invitation will be created
 		else if (MessageEvents.getSize() == 2)
@@ -408,11 +416,11 @@ class Join implements BotActions {
 		
 		//If the message is not two words or did not come from the server the help menu with an example will be sent
 		if(MessageEvents.getSize() != 2 || !MessageEvents.getEvent().isFromGuild()) 
-			MessagesFormat.sendHelp("Example: @DopeBot join");
+			MessagesFormat.sendHelp();
 		
 		//Else If the user or bot does not have permission to manage the server this will be sent
-		else if(MessagesFormat.hasPermission(Permission.MANAGE_SERVER))
-			MessagesFormat.sendHelp("You or me do not have permission to manage this server");
+		else if(MessagesFormat.hasPermission(Permission.PRIORITY_SPEAKER))
+			MessagesFormat.sendHelp();
 		
 		//Else If the bot is already in a voice channel this warning will be sent
 		else if (MessageEvents.selfVoiceState.inVoiceChannel())
@@ -438,7 +446,7 @@ class Joke implements BotActions {
 		
 		//If the message is not 2 words this will be sent
 		if(MessageEvents.getSize() != 2)
-			MessagesFormat.sendHelp("Example: @DopeBot joke");
+			MessagesFormat.sendHelp();
 		
 		//Else it will try to get a joke from the API and send it
 		else {
@@ -470,11 +478,11 @@ class Kick implements BotActions {
 		
 		//Else If the bot or member do not have permission to kick members the help menu with an explanation will be sent
 		else if(MessagesFormat.hasPermission(Permission.KICK_MEMBERS))
-			MessagesFormat.sendHelp("You or me do not have have permission to kick members");
+			MessagesFormat.sendHelp();
 		
 		//Else If the member only mentioned the bot the help menu with an example will be sent
 		else if(MessageEvents.getMembers().size() == 1)
-			MessagesFormat.sendHelp("Example: @DopeBot kick @DopeJaime @JaimeDope");
+			MessagesFormat.sendHelp();
 		
 		//Else it will try to kick all possible mentioned members
         else {
@@ -498,11 +506,11 @@ class Leave implements BotActions {
 		
 		//If the message does not have 2 words or is not from the guild the help menu with an example will be sent
 		if(MessageEvents.getSize() != 2 || !MessageEvents.getEvent().isFromGuild()) 
-			MessagesFormat.sendHelp("Example: @DopeBot leave");
+			MessagesFormat.sendHelp();
 		
 		//Else if the bot or member does not have permission to manage the server the help menu with an example will be sent
-		else if(MessagesFormat.hasPermission(Permission.MANAGE_SERVER))
-			MessagesFormat.sendHelp("You or me do not have have permission to kick members");
+		else if(MessagesFormat.hasPermission(Permission.PRIORITY_SPEAKER))
+			MessagesFormat.sendHelp();
 		
 		//Else If the bot and member are not in the same voice channel this will be printed
 		else if (!MessageEvents.getGuild().getAudioManager().getConnectedChannel().getMembers().contains(MessageEvents.getEvent().getMember())) {
@@ -530,7 +538,7 @@ class Meme implements BotActions {
 		
 		//If the message is not 2 words the help menu with an example will be sent
 		if(MessageEvents.getSize() != 2) 
-			MessagesFormat.sendHelp("Example: @DopeBot meme");
+			MessagesFormat.sendHelp();
 		
 		//Else it will get a meme from this API
 		else {
@@ -561,11 +569,11 @@ class Mute implements BotActions {
 		
 		//Else If the bot or member do not have permission to manage roles the help menu  with an explanation will be sent
 		else if(MessagesFormat.hasPermission(Permission.MANAGE_ROLES))
-			MessagesFormat.sendHelp("You or me do not have permission to manage roles");
+			MessagesFormat.sendHelp();
 		
 		//Else If the mentioned members are only 1 the help menu with an example will be sent
 		else if(MessageEvents.getMembers().size() == 1)
-			MessagesFormat.sendHelp("Example: @DopeBot mute @DopeJaime @JaimeDope");
+			MessagesFormat.sendHelp();
 			
 		//Else it will mute all possible members
   		else {
@@ -589,11 +597,11 @@ class Nick implements BotActions {
 		
 		//If the message does not have 2  words or is not from the guild
   		if(MessageEvents.getMembers().size() != 2 || !MessageEvents.getEvent().isFromGuild()) 
-  			MessagesFormat.sendHelp("Example: nick @DopeJaime Dopest Jaime");
+  			MessagesFormat.sendHelp();
   		
   		//Else If the bot or member do not have permission to change a nickname the help menu will be sent with an explanation
   		else if(MessagesFormat.hasPermission(Permission.NICKNAME_CHANGE))
-  			MessagesFormat.sendHelp("You or me do not have permission to change nicknames");
+  			MessagesFormat.sendHelp();
   		
   		//Else If the message does not have 2 mentioned members the help menu will be sent
   		else if(MessageEvents.getMembers().size() != 2) 
@@ -620,11 +628,11 @@ class Pause implements BotActions {
 		
 		//If the  message is not 2 words or it is not from the guild the help menu with an example will be sent
 		if(MessageEvents.getSize() != 2 || !MessageEvents.getEvent().isFromGuild()) 
-			MessagesFormat.sendHelp("Example: @DopeBot pause");
+			MessagesFormat.sendHelp();
 		
 		//Else If the bot or member does not have permission to manage the server the help menu will be sent
-		else if(MessagesFormat.hasPermission(Permission.MANAGE_SERVER))
-			MessagesFormat.sendHelp("You or me do not have permission to manage the  server");
+		else if(MessagesFormat.hasPermission(Permission.PRIORITY_SPEAKER))
+			MessagesFormat.sendHelp();
 			
 		//Else If no track is playing the help menu will be sent with additional information
 		else if (MessageEvents.player.getPlayingTrack() == null) 
@@ -650,11 +658,11 @@ class Pin implements BotActions {
 		
 		//If the message only has 2 words or is not from the guild then the help menu will be sent
 		if(MessageEvents.getSize() == 2 || !MessageEvents.getEvent().isFromGuild()) 
-			MessagesFormat.sendHelp("Example: @DopeBot pin Hope everyone is having a nice day 😊");
+			MessagesFormat.sendHelp();
 		
 		//Else If the bot or member does not have permission to manage messages the help menu with an explanation will be sent
 		else if(MessagesFormat.hasPermission(Permission.MESSAGE_MANAGE))
-			MessagesFormat.sendHelp("You or me do not have permission to manage messages");
+			MessagesFormat.sendHelp();
 			
 		//Else the message will be pinned and the code to unpin it will be given
 		else {
@@ -672,7 +680,7 @@ class Ping implements BotActions {
 		
 		//If the message does not have 2 words the help menu will be sent with an example
 		if(MessageEvents.getSize() != 2)
-			MessagesFormat.sendHelp("Example: @DopeBot ping");
+			MessagesFormat.sendHelp();
 		
 		//Else the ping will be sent
 		else 
@@ -688,11 +696,11 @@ class Play implements BotActions {
 		
 		//If message does not have 2 words or was not sent from the guild then the help menu with an example will be sent
         if(MessageEvents.getSize() == 2 || !MessageEvents.getEvent().isFromGuild()) 
-        	MessagesFormat.sendHelp("Example: @DopeBot play");
+        	MessagesFormat.sendHelp();
         
         //Else If the bot or member do not have permission to manage the server then the help menu will be sent
-        else if(MessagesFormat.hasPermission(Permission.MANAGE_SERVER))
-        	MessagesFormat.sendHelp("You or me do not have permission to manage the server");
+        else if(MessagesFormat.hasPermission(Permission.PRIORITY_SPEAKER))
+        	MessagesFormat.sendHelp();
         
         //Else If the bot is not in a voice channel the help menu will be sent with this explanation
         else if (!MessageEvents.selfVoiceState.inVoiceChannel()) 
@@ -727,11 +735,11 @@ class Playing implements BotActions {
 		
 		//If the message does not have 2 words or was not from a guild then the help menu with an example will be sent
         if(MessageEvents.getSize() != 2 || !MessageEvents.getEvent().isFromGuild()) 
-        	MessagesFormat.sendHelp("Example: @DopeBot playing");
+        	MessagesFormat.sendHelp();
         
         //Else If the bot or member do not have permission to manage the server the help menu will be sent
-        else if(MessagesFormat.hasPermission(Permission.MANAGE_SERVER))
-        	MessagesFormat.sendHelp("You or me do not have permission to manage the server");
+        else if(MessagesFormat.hasPermission(Permission.PRIORITY_SPEAKER))
+        	MessagesFormat.sendHelp();
         
         //Else If there it nothing playing the help menu will be sent with an explanation
         else if (MessageEvents.player.getPlayingTrack() == null) 
@@ -755,11 +763,11 @@ class PM implements BotActions {
 		
 		//If the message has less than  4 words or is not from a guild the help  menu with an example will be sent
 		if(!MessageEvents.getEvent().isFromGuild() || MessageEvents.getSize() < 4)
-			MessagesFormat.sendHelp("Example: @DopeBot pm @DopeJaime Hey man how are you?");
+			MessagesFormat.sendHelp();
 		
 		//Else  If the bot or user do not have administrator permission the help menu will be sent
 		else if(MessagesFormat.hasPermission(Permission.ADMINISTRATOR) || MessageEvents.getMembers().size() != 2)
-			MessagesFormat.sendHelp("You or me do not have administrator permission");
+			MessagesFormat.sendHelp();
 			
 		//Else the bot will send a  private message to the mentioned member
 		else { 
@@ -777,11 +785,11 @@ class Purge implements BotActions {
 		
 		//If the message was not sent from a guild or is not 2 words the help menu with an example will be sent
 		if(MessageEvents.getSize() != 2 || !MessageEvents.getEvent().isFromGuild())
-			MessagesFormat.sendHelp("Example: @DopeBot purge");
+			MessagesFormat.sendHelp();
 		
 		//Else If the bot or user does not have permission to kick members the help menu will be sent
 		else if(MessagesFormat.hasPermission(Permission.KICK_MEMBERS))
-			MessagesFormat.sendHelp("You or me do not have the permission to kick members");
+			MessagesFormat.sendHelp();
 		
 		//Else the bot will kick all possible members in the guild
 		else {
@@ -804,11 +812,11 @@ class Queue implements BotActions {
 		
 		//If the message is not 2 words or was not sent from a guild the help menu with an example will be sent
         if(MessageEvents.getSize() != 2 || !MessageEvents.getEvent().isFromGuild())
-        	MessagesFormat.sendHelp("Example: @DopeBot queue");
+        	MessagesFormat.sendHelp();
         
         //Else If the bot or user does not have permission to manage the server the help menu will be sent
-        else if(MessagesFormat.hasPermission(Permission.MANAGE_SERVER))
-        	MessagesFormat.sendHelp("You or me do not have the permission to manage the server");
+        else if(MessagesFormat.hasPermission(Permission.PRIORITY_SPEAKER))
+        	MessagesFormat.sendHelp();
         	
         //Else If the queue is empty then the bot will let the user know
         else if (MessageEvents.queue.isEmpty()) 
@@ -836,11 +844,11 @@ class Quite implements BotActions {
 		
 		//If the message does not have 2 words or is not from a guild the help menu with an example will be sent
 		if(MessageEvents.getSize() != 2 || !MessageEvents.getEvent().isFromGuild())
-			MessagesFormat.sendHelp("Example: @DopeBot quite");
+			MessagesFormat.sendHelp();
 		
 		//Else If the bot or member does not have permission to manage roles the help menu with an explanation will be sent
 		else if(MessagesFormat.hasPermission(Permission.MANAGE_ROLES))
-			MessagesFormat.sendHelp("You or me do not have permission to manage roles");
+			MessagesFormat.sendHelp();
 			
 		//Else it will mute every possible member
 		else {
@@ -864,11 +872,11 @@ class RemoveNick implements BotActions {
 		
 		//If the message does not have 3 words or does not come from a guild the help menu with an example will be sent
 		if(MessageEvents.getSize() != 3 || !MessageEvents.getEvent().isFromGuild())
-			MessagesFormat.sendHelp("Example: @DopeBot removenick @DopeJaime");
+			MessagesFormat.sendHelp();
 		
 		//Else If the member did not mentioned 2 users then the help menu will be sent
 		else if(MessageEvents.getMembers().size() != 2 || MessagesFormat.hasPermission(Permission.NICKNAME_CHANGE))
-			MessagesFormat.sendHelp("You or me do not have the permission to change nicknames");
+			MessagesFormat.sendHelp();
 			
 		//Else his nickname will be removed
   		else {
@@ -890,11 +898,11 @@ class RemoveRole implements BotActions {
 		
 		//If the message has less than 4 words the help menu with an example will be sent 
 		if(MessageEvents.getSize() < 4 || !MessageEvents.getEvent().isFromGuild())
-			MessagesFormat.sendHelp("Example: @DopeBot removerole @DopeJaime");
+			MessagesFormat.sendHelp();
 		
 		//Else If the bot or member do not have permission to manage roles or did not mention 2 members the help menu will be sent
 		else if(MessagesFormat.hasPermission(Permission.MANAGE_ROLES) || MessageEvents.getMembers().size() != 2)
-			MessagesFormat.sendHelp("You or me do not have the permission to manage roles");
+			MessagesFormat.sendHelp();
 		
 		//Else the bot will try to remove the role to the mentioned member
   		else {
@@ -903,6 +911,13 @@ class RemoveRole implements BotActions {
   				MessagesFormat.send(MessagesFormat.getSentence(3) + " role has been removed to " + MessageEvents.getUsername());
   			}catch(HierarchyException e) {
   				MessagesFormat.sendHelp("Can't remove a role to " + MessageEvents.getUsername() + ", I have equal or lower hierchy than the person");
+  			}catch(IndexOutOfBoundsException es) {
+  				String roleList = "";
+	  			for(Role role: MessageEvents.getGuild().getRoles()) {
+	  				roleList += role.getName() + "\n";
+	  			}
+	  			MessagesFormat.sendHelp("Could not find role. Choose one from the list below.");
+	  			MessagesFormat.send(MessagesFormat.createEmbed(Color.BLUE, roleList));
   			}
   		}
 	}
@@ -916,11 +931,11 @@ class Repeat implements BotActions {
 		
 		//If the message does not have 2 words or was not from a guild the help menu with an example will be sent
 		if(MessageEvents.getSize() != 2 || !MessageEvents.getEvent().isFromGuild()) 
-			MessagesFormat.sendHelp("Example: @DopeBot repeat");
+			MessagesFormat.sendHelp();
 		
 		//Else If the bot or user does not have permission to manage the server the help menu will be sent with an explanation
-		else if(MessagesFormat.hasPermission(Permission.MANAGE_SERVER))
-			MessagesFormat.sendHelp("You or me do not have permission to manage the server");
+		else if(MessagesFormat.hasPermission(Permission.PRIORITY_SPEAKER))
+			MessagesFormat.sendHelp();
 		
 		//Else If the track is not null it will repeat the current track
 		else if (MessageEvents.player.getPlayingTrack() != null) {
@@ -943,7 +958,7 @@ class Roll implements BotActions {
 		
 		//If the message has more than 4 words the help menu with an example will be sent
 		if(MessageEvents.getSize() > 4)
-			MessagesFormat.sendHelp("Example: @DopeBot roll [#Dices] [#Sides]");
+			MessagesFormat.sendHelp();
 		
 		//Else if the message has 2 words it will sent the default results 
 		else if(MessageEvents.getSize() == 2)
@@ -983,11 +998,11 @@ class Say implements BotActions {
 		
 		//If the message is only 2 words or is not from a guild the help menu with an example will be sent
 		if(MessageEvents.getSize() == 2 || !MessageEvents.getEvent().isFromGuild()) 
-			MessagesFormat.sendHelp("Example: @DopeBot say Jaime is my creator");
+			MessagesFormat.sendHelp();
 		
 		//Else if the bot or user does not have administrator permission the help menu with an explanation will be sent
 		else if(MessagesFormat.hasPermission(Permission.ADMINISTRATOR))
-			MessagesFormat.sendHelp("You or me do not have administratot permission");
+			MessagesFormat.sendHelp();
 		
 		//Else the bot will send the message asked for
 		else
@@ -1003,7 +1018,7 @@ class Search implements BotActions {
 		
 		//If the message is only 2 words it will send the help menu with an example
 		if(MessageEvents.getSize() == 2) {
-			MessagesFormat.sendHelp("Example: @DopeBot search how big is the moon");
+			MessagesFormat.sendHelp();
 			
 		//Else it will send a search result for user's input
 		}else {
@@ -1027,7 +1042,7 @@ class ServerInfo implements BotActions {
 		
 		//If the message does not have 2 words or was not from a guild the help menu with an example will be sent
 		if (MessageEvents.getSize() != 2 || !MessageEvents.getEvent().isFromGuild())
-        	MessagesFormat.sendHelp("Example: @DopeBot serverinfo");
+        	MessagesFormat.sendHelp();
 		
 		//Else it will print the information of the server
         else {
@@ -1050,11 +1065,11 @@ class Shutdown implements BotActions {
 		
 		//If the message is not 2 words or was not from a guild the help menu with an example will be sent
 		if(MessageEvents.getSize() != 2 || !MessageEvents.getEvent().isFromGuild())
-			MessagesFormat.sendHelp("Example: @DopeBot shutdown");
+			MessagesFormat.sendHelp();
 		
 		//Else If the bot or user does not have administrator permission the help menu will be sent
 		else if(MessagesFormat.hasPermission(Permission.ADMINISTRATOR))
-			MessagesFormat.sendHelp("You or me do not have administrator permission");
+			MessagesFormat.sendHelp();
 		
 		//Else it will send a message when the bot shuts down
 		else {
@@ -1078,11 +1093,11 @@ class Skip implements BotActions {
 		
 		//If the message does not have 2 words or was not sent from a guild the help menu with an example will be sent
 		if(MessageEvents.getSize()  != 2 || !MessageEvents.getEvent().isFromGuild()) 
-			MessagesFormat.sendHelp("Example: @DopeBot skip");
+			MessagesFormat.sendHelp();
 		
 		//Else If the bot or member does not have permission to manage the server the help menu will be sent
-		else if(MessagesFormat.hasPermission(Permission.MANAGE_SERVER))
-			MessagesFormat.sendHelp("You or me do not have permission to manage the server");
+		else if(MessagesFormat.hasPermission(Permission.PRIORITY_SPEAKER))
+			MessagesFormat.sendHelp();
 		
 		//Else If the player is not playing anything the help menu will be sent with an explanation
 		else if (PlayerManager.getMusicManager(MessageEvents.getGuild()).audioPlayer.getPlayingTrack() == null)
@@ -1110,11 +1125,11 @@ class SoftBan implements BotActions {
 		
 		//If the message has less than 4 words or was not sent from a guild the help menu with an example will be sent
 		if(MessageEvents.getSize() < 4 || !MessageEvents.getEvent().isFromGuild()) 
-			MessagesFormat.sendHelp("Example: @DopeBot softban 15 @DopeJaime @JaimeDope");
+			MessagesFormat.sendHelp();
 		
 		//Else If the bot or member does not have permission to manage roles the help menu will be sent
 		else if(MessagesFormat.hasPermission(Permission.MANAGE_ROLES))
-			MessagesFormat.sendHelp("You or me do not have permission to manage roles");
+			MessagesFormat.sendHelp();
 		
 		//Else If the post command does not contain numbers or the mentioned members are 1 the help menu will be sent
 		else if(!MessageEvents.getPostCommand().matches("[0-9]+") || MessageEvents.getMembers().size() == 1)
@@ -1146,11 +1161,11 @@ class Stop implements BotActions {
 		
 		//If the message does not have 2 words or is not from a guild the help menu with an example will be sent
         if(MessageEvents.getSize() != 2 || !MessageEvents.getEvent().isFromGuild()) 
-        	MessagesFormat.sendHelp("Example: @DopeBot stop");
+        	MessagesFormat.sendHelp();
         
         //Else If the bot or member does not have permission to manage the server the help menu will be sent
-        else if(MessagesFormat.hasPermission(Permission.MANAGE_SERVER))
-        	MessagesFormat.sendHelp("You or me do not have permission to manage the server");
+        else if(MessagesFormat.hasPermission(Permission.PRIORITY_SPEAKER))
+        	MessagesFormat.sendHelp();
         
         //Else If the player is not playing a track the help menu will be sent with an explanation
         else if (MessageEvents.player.getPlayingTrack() == null)
@@ -1174,7 +1189,7 @@ class UD implements BotActions {
 		
 		//If the message has 2 words the help menu with an example will be sent
 		if(MessageEvents.getSize() == 2)
-			MessagesFormat.sendHelp("Example: @DopeBot ud John Cena");
+			MessagesFormat.sendHelp();
 		
 		//Else it gets all valid definitions and sends one to the user
 		else {
@@ -1209,11 +1224,11 @@ class Unban implements BotActions {
 		
 		//If the message is only 2 words or did not come from a guild the help menu will be sent with an example 
 		if(MessageEvents.getSize() == 2 || !MessageEvents.getEvent().isFromGuild()) 
-			MessagesFormat.sendHelp("Example: @DopeBot unban dopejaime jaimedope");
+			MessagesFormat.sendHelp();
 		
 		//Else if the bot or member does not have permission to ban the help menu will be sent
 		else if(MessagesFormat.hasPermission(Permission.BAN_MEMBERS))
-			MessagesFormat.sendHelp("You or me do not have permission to ban or unban members");
+			MessagesFormat.sendHelp();
 			
 		//Else it will go through the list and unban all possible members
 		else {
@@ -1221,10 +1236,13 @@ class Unban implements BotActions {
 				String[] user = MessageEvents.getArgs();
 				
 				if(SQLiteDataSource.isBanned(user[i])) {
-					MessageEvents.getGuild().unban(SQLiteDataSource.getUserID(user[i])).queue();
-					MessagesFormat.send(MessagesFormat.createEmbed(Color.BLUE, user[i] + " Unbanned"));
-					SQLiteDataSource.updateBanned(user[i], "false");
-				
+					try {
+						MessageEvents.getGuild().unban(SQLiteDataSource.getUserID(user[i])).queue();
+						MessagesFormat.send(MessagesFormat.createEmbed(Color.BLUE, user[i] + " Unbanned"));
+						SQLiteDataSource.updateBanned(user[i], "false");
+					}catch(ErrorResponseException ex) {
+						MessagesFormat.sendHelp();
+					}
 				}else {
 					MessagesFormat.sendHelp("Could not find " + user[i] + " in the banned list");
 				}
@@ -1241,11 +1259,11 @@ class Unmute implements BotActions {
 		
 		//If the message is 2 words or was not sent from a guild the help menu with an example will be sent
 		if(MessageEvents.getSize() == 2 || !MessageEvents.getEvent().isFromGuild()) 
-			MessagesFormat.sendHelp("Example: @DopeBot mute @DopeJaime @JaimeDope");
+			MessagesFormat.sendHelp();
 		
 		//Else if the bot or member do not have permission to manage roles or only one member was mentioned the help menu will be sent
 		else if(MessageEvents.getMembers().size() == 1 || MessagesFormat.hasPermission(Permission.MANAGE_ROLES))
-			MessagesFormat.sendHelp("You or me do not have permission to manage roles");
+			MessagesFormat.sendHelp();
 		
 		//Else it will try to unmute all mentioned members
   		else {
@@ -1269,11 +1287,11 @@ class Unpin implements BotActions {
 		
 		//If the message is not 3 words or was not from a guild the help menu will be sent with an example
 		if(MessageEvents.getSize() != 3 || !MessageEvents.getEvent().isFromGuild()) 
-			MessagesFormat.sendHelp("Example: @DopeBot unpin 682bad63-6997-45a5-bfc8-afb2189ceb77");
+			MessagesFormat.sendHelp();
 		
 		//Else If the bot or member do not have permission to manage messages the help menu will be sent
 		else if(MessagesFormat.hasPermission(Permission.MESSAGE_MANAGE))
-			MessagesFormat.sendHelp("You or me do not have permission to manage messages");
+			MessagesFormat.sendHelp();
 		
 		//Else it will try to unpin the message with the given id
   		else {
@@ -1296,11 +1314,11 @@ class Unquite implements BotActions {
 		
 		//
 		if(MessageEvents.getSize() != 2 || !MessageEvents.getEvent().isFromGuild()) 
-			MessagesFormat.sendHelp("Example: @DopeBot unquite");
+			MessagesFormat.sendHelp();
 		
 		//Else If the bot or member do not have permission to manage roles the help menu with an explanation will be sent
 		else if(MessagesFormat.hasPermission(Permission.MANAGE_ROLES))
-			MessagesFormat.sendHelp("You or me do not have permission to manage roles");
+			MessagesFormat.sendHelp();
 		
 		//Else it will unmute all possible users
 		else {
@@ -1327,7 +1345,7 @@ class Users implements BotActions {
 		
 		//If the message is not 3 words or from a guild the help menu with an example will be sent
 		if(MessageEvents.getSize() == 2 || !MessageEvents.getEvent().isFromGuild()) 
-			MessagesFormat.sendHelp("Example: @DopeBot user @DopeJaime");
+			MessagesFormat.sendHelp();
 		
 		//Else If the member didn't mention someone else the help menu will be sent
 		else if(MessageEvents.getMembers().size() == 1) 
@@ -1386,11 +1404,11 @@ class Volume implements BotActions {
 		
 		//If the message has more than 3 words or was not from a guild the help menu with an example will be sent
 		if(MessageEvents.getSize() > 3 || !MessageEvents.getEvent().isFromGuild()) 
-			MessagesFormat.sendHelp("Example: @DopeBot volume [number]");
+			MessagesFormat.sendHelp();
 		
 		//Else If the bot or user does not have permission to manage the server the help menu will be sent
-		else if(MessagesFormat.hasPermission(Permission.MANAGE_SERVER))
-			MessagesFormat.sendHelp("You or me do not have permission to manage the server");
+		else if(MessagesFormat.hasPermission(Permission.PRIORITY_SPEAKER))
+			MessagesFormat.sendHelp();
 		
 		//Else If the message is only two words it will send information on the current volume
 		else if (MessageEvents.getSize() == 2)
@@ -1428,15 +1446,15 @@ class Warn implements BotActions {
 	}
 	
 	@Override
-	public void execute() throws SQLException {
+	public void execute() throws SQLException{
 		
 		//If the message does not have 3 words or was not from a guild the help menu with an example will be sent
   		if(MessageEvents.getSize() != 3 || !MessageEvents.getEvent().isFromGuild()) 
-  			MessagesFormat.sendHelp("Example: @DopeBot warn @DopeJaime");
+  			MessagesFormat.sendHelp();
   		
   		//Else If the bot or user do not have permission to manage roles or didn't mention 2 people the help menu will be sent with an explanation
   		else if(MessageEvents.getMembers().size() != 2 || MessagesFormat.hasPermission(Permission.MANAGE_ROLES))
-  			MessagesFormat.sendHelp("You or me do not have permission to manage roles");
+  			MessagesFormat.sendHelp();
   		
   		//Else it will use a switch to see how many warnings it has and execute their corresponding procedure
   		else {
@@ -1468,15 +1486,11 @@ class About implements BotActions{
 	@Override
 	public void execute() throws SQLException {
 		
-		//If the message does not have 2 words the help menu with an example will be sent
-		if(MessageEvents.getSize() != 2)
-			MessagesFormat.sendHelp("Example: @DopeBot about");
-		
-		//Else it will send the about menu
-		else 
+		//If the message have 2 words the menu about the bot will be sent
+		if(MessageEvents.getSize() == 2)
 			MessagesFormat.send(new EmbedBuilder().setTitle("Hello! " + MessageEvents.getEvent().getMessage().getAuthor().getName()).setColor(Color.BLUE)
 					.setFooter(SQLiteDataSource.getHelp("footer1"), SQLiteDataSource.getHelp("footer2")).addField("Need some help?", "Join our [Discord Server](https://discord.gg/nWWBYJ9)", true)
-					.setDescription("I'm **@DopeBot.** Created by **@Jaime 💎!**\nBuilt using [Java 14](https://docs.oracle.com/en/java/javase/14/) and [JDA 4](https://github.com/DV8FromTheWorld/JDA/wiki)").build());
+					.setDescription("I'm **@DopeBot.** Created by **Jaime 💎!**\nBuilt using [Java 14](https://docs.oracle.com/en/java/javase/14/) and [JDA 4](https://github.com/DV8FromTheWorld/JDA/wiki)").build());
 	}
 }
 
@@ -1488,7 +1502,7 @@ class Calc implements BotActions{
 		
 		//If the message only has 2 words the help menu with an example will be sent
 		if(MessageEvents.getSize() == 2)
-			MessagesFormat.sendHelp("Example: @DopeBot calc 35^2 / (25 - 59) * sqrt(5)");
+			MessagesFormat.sendHelp();
 		
 		//Else it will send the result of the operation
 		else {
@@ -1502,42 +1516,3 @@ class Calc implements BotActions{
 		}
 	}
 }
-
-////**@DopeBot** reddit [subreddit]
-//class Reddit implements BotActions{
-//	
-//	String url = "";
-//	String title = "";
-//	String author = "";
-//
-//	Reddit(String url, String title, String author){
-//		this.url = url;
-//		this.title = title;
-//		this.author = author;
-//	}
-//	
-//	@Override
-//	public void execute() throws SQLException {
-//		if(MessageEvents.getSize() == 2)
-//			MessagesFormat.sendHelp();
-//	}
-//}
-//
-////**@DopeBot** prefix [new prefix]
-//class Prefix implements BotActions {
-//
-//	@Override
-//	public void execute() throws SQLException {
-////		if(MessageEvents.getSize()  != 3) 
-////			MessagesFormat.sendHelp(MessageEvents.getCommand());
-////		else {
-////			try (PreparedStatement preparedStatement = SQLiteDataSource.getConnection().prepareStatement("UPDATE guild_settings SET prefix = ? WHERE guild_id = ?")) {
-////				preparedStatement.setString(1, MessageEvents.getPostCommand());
-////				preparedStatement.setString(2, MessageEvents.getEvent().getGuild().getId());
-////				preparedStatement.executeUpdate();
-////			} catch (SQLException e) {
-////				e.printStackTrace();
-////			}
-////		}
-//	}
-//}

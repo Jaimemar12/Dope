@@ -14,6 +14,7 @@ import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.GuildVoiceState;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
+import net.dv8tion.jda.api.exceptions.ContextException;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 
 public class MessageEvents extends ListenerAdapter {
@@ -46,6 +47,12 @@ public class MessageEvents extends ListenerAdapter {
         if(event.getAuthor().isBot() && getID) {
         	messageId = event.getMessageId();
         	getID = false;
+        	try {
+				SQLiteDataSource.setHelpID();
+			} catch (SQLException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
         }
         
         if((args[0].equals(Dope.prefixM) || args[0].equals(Dope.prefix)) && args.length == 1 && !event.getAuthor().isBot())
@@ -87,12 +94,13 @@ public class MessageEvents extends ListenerAdapter {
 				} catch (SQLException e) {
 					e.printStackTrace();
 				}
-	        } else
+	        }else {
 				try {
 					noCommand();
 				} catch (SQLException e) {
 					e.printStackTrace();
 				}
+	        }
 		}
 	}
 	
@@ -185,9 +193,6 @@ public class MessageEvents extends ListenerAdapter {
 	}
 	public static String getMessageId() {
 		return messageId;
-	}
-	public static void resetMessageId() {
-		messageId = "";
 	}
 	public static void setId() {
 		getID = true;

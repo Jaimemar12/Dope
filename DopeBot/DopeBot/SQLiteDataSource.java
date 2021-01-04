@@ -140,10 +140,9 @@ public class SQLiteDataSource {
 		ResultSet  rs = null;
 		try {
 			con = getConnection();
-			String sql =  "Select userID from guild where guildID = ? AND username  = ?";
+			String sql =  "Select userID from guild where username  = ?";
 			ps = con.prepareStatement(sql);
-			ps.setString(1, MessageEvents.getGuild().getId());
-			ps.setString(2, username);
+			ps.setString(1, username);
 			rs = ps.executeQuery();
 			
 			//checks if it exists
@@ -316,6 +315,107 @@ public class SQLiteDataSource {
 			}
 		}
 		return pinID;
+	}
+	
+	public static void setHelpID () throws SQLException {
+		User user = null;
+		if(MessageEvents.getEvent().isFromGuild()) 
+			user = MessageEvents.getMember().getUser();
+		else
+			user = MessageEvents.getEvent().getAuthor();
+		PreparedStatement ps = null;
+		Connection con = null;
+		if(getUserID(user.getName()).equals("")) {
+			con = DriverManager.getConnection("jdbc:sqlite:DopeBot.db");
+			String sql =  "INSERT INTO guild(username, userID, helpID) VALUES(?,?,?)";
+			ps = con.prepareStatement(sql);
+			ps.setString(1, user.getName());
+			ps.setString(2, user.getId());
+			ps.setString(3, MessageEvents.getMessageId());
+			ps.execute();
+		}else {
+			try {
+				con = DriverManager.getConnection("jdbc:sqlite:DopeBot.db");
+				String sql =  "UPDATE guild set helpID = ? where userID = ?";
+				ps = con.prepareStatement(sql);
+				ps.setString(1, MessageEvents.getMessageId());
+				ps.setString(2, user.getId());
+				ps.execute();
+			} catch (SQLException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}finally {
+				try {
+					ps.close();
+					con.close();
+				} catch(SQLException e) {
+					
+				}
+			}
+		}
+	}
+	
+	public static String getHelpID() {
+		User user = null;
+		if(MessageEvents.getEvent().isFromGuild()) 
+			user = MessageEvents.getMember().getUser();
+		else
+			user = MessageEvents.getEvent().getAuthor();
+		
+		PreparedStatement ps = null;
+		Connection con = null;
+		ResultSet  rs = null;
+		try {
+			con = DriverManager.getConnection("jdbc:sqlite:DopeBot.db");
+			String sql =  "Select helpID from guild where userID = ?";
+			ps = con.prepareStatement(sql);
+			ps.setString(1, user.getId());
+			rs = ps.executeQuery();
+			//checks if it exists
+			if(rs.next())
+				return rs.getString(1);
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} finally {
+			try {
+				rs.close();
+				ps.close();
+				con.close();
+			} catch(SQLException e) {
+				
+			}
+		}
+		return null;
+	}
+	
+	public static String editHelpID() {
+		User user = GuildEvent.getChannel().getUser();
+		PreparedStatement ps = null;
+		Connection con = null;
+		ResultSet  rs = null;
+		try {
+			con = DriverManager.getConnection("jdbc:sqlite:DopeBot.db");
+			String sql =  "Select helpID from guild where userID = ?";
+			ps = con.prepareStatement(sql);
+			ps.setString(1, user.getId());
+			rs = ps.executeQuery();
+			//checks if it exists
+			if(rs.next())
+				return rs.getString(1);
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} finally {
+			try {
+				rs.close();
+				ps.close();
+				con.close();
+			} catch(SQLException e) {
+				
+			}
+		}
+		return null;
 	}
 	
 	/**
